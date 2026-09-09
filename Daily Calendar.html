@@ -1,0 +1,5143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CST Planner">
+<meta name="theme-color" content="#0F3B31">
+<title>Rota-Linked Study &amp; Training Planner</title>
+<style>
+  :root{
+    --bg:#F4F5F3;
+    --panel:#FFFFFF;
+    --ink:#17262E;
+    --ink-soft:#4B5A61;
+    --line:#DDE2E1;
+    --teal:#1F6F5C;
+    --teal-ink:#0F3B31;
+    --grey-shift:#55606B;
+    --maroon:#7A3B33;
+    --plum:#5B4B8A;
+    --amber:#B9782F;
+    --amber-bg:#FBEEDD;
+    --red-bg:#FBE7E4;
+    --red-ink:#8A3226;
+    --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  header.top{
+    background:var(--teal-ink); color:#F4F5F3; padding:22px 28px 18px;
+  }
+  header.top h1{
+    font-family:var(--serif); font-weight:400; font-size:26px; margin:0 0 4px;
+    letter-spacing:0.2px;
+  }
+  header.top p.sub{margin:0; color:#B9C9C4; font-size:13.5px;}
+  .chips{display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;}
+  .chip{
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+    border-radius:8px; padding:8px 12px; font-size:12.5px; min-width:120px;
+  }
+  .chip .label{color:#9FB6AF; display:block; font-size:11px; margin-bottom:2px;}
+  .chip .val{font-weight:600; font-size:14.5px;}
+  .chip.warn{background:rgba(185,120,47,0.18); border-color:rgba(185,120,47,0.4);}
+  .chip.stat{background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.35);}
+
+  main{
+    display:grid; grid-template-columns: 1fr 400px; gap:20px;
+    padding:20px 28px 40px; max-width:1280px; margin:0 auto;
+  }
+  @media (max-width:920px){ main{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:18px 18px 20px;
+  }
+  .panel h2{
+    font-family:var(--serif); font-weight:400; font-size:18px; margin:0 0 12px;
+    color:var(--teal-ink);
+  }
+
+  .cal-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .cal-nav button{
+    background:var(--bg); border:1px solid var(--line); border-radius:6px;
+    padding:6px 12px; font-size:13px; cursor:pointer; color:var(--ink);
+  }
+  .cal-nav button:hover{background:#EAECEA;}
+  .cal-nav .month-label{font-weight:600; font-size:15px;}
+
+  .grid7{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .dow{text-align:center; font-size:11px; color:var(--ink-soft); padding-bottom:4px; font-weight:600;}
+  .day-cell{
+    border-radius:6px; padding:6px 5px; min-height:56px; cursor:pointer;
+    border:1px solid transparent; font-size:11.5px; position:relative;
+    display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .day-cell:hover{border-color:var(--ink);}
+  .day-cell.selected{outline:2px solid var(--ink); outline-offset:-2px;}
+  .day-cell .dnum{font-weight:700; font-size:13px;}
+  .day-cell .shifttag{font-size:9.5px; font-weight:700; letter-spacing:0.3px; padding:1px 5px; border-radius:4px; align-self:flex-start;}
+  .day-cell.empty{visibility:hidden;}
+  .day-cell .flagdot{position:absolute; top:5px; right:6px; width:6px; height:6px; border-radius:50%; background:var(--amber);}
+
+  .shift-Day, .shift-WeekendDay{background:#E4F0EC;}
+  .shift-Day .shifttag, .shift-WeekendDay .shifttag{background:var(--teal); color:#fff;}
+  .shift-Nights{background:#E9EBEC;}
+  .shift-Nights .shifttag{background:var(--grey-shift); color:#fff;}
+  .shift-Longs{background:#F3E6E3;}
+  .shift-Longs .shifttag{background:var(--maroon); color:#fff;}
+  .shift-Lates{background:#EBE7F2;}
+  .shift-Lates .shifttag{background:var(--plum); color:#fff;}
+  .shift-Off{background:#FFFFFF; border:1px dashed var(--line);}
+  .shift-Off .shifttag{background:#EEE; color:#8A8A8A;}
+
+  .legend{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; font-size:11.5px; color:var(--ink-soft);}
+  .legend span.dot{display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:5px; vertical-align:middle;}
+
+  #detail .datehead{font-family:var(--serif); font-size:20px; margin:0 0 2px;}
+  #detail .shiftline{font-size:13px; color:var(--ink-soft); margin-bottom:14px;}
+  #detail .projflag{color:var(--amber); font-weight:600;}
+  .block{margin-bottom:16px;}
+  .block h3{font-size:11.5px; text-transform:uppercase; letter-spacing:0.6px; color:var(--ink-soft); margin:0 0 6px; font-weight:700;}
+  .block p{margin:0; font-size:13.5px; line-height:1.5;}
+  .tasklist{margin:0; padding-left:0; list-style:none;}
+  .tasklist li{font-size:13px; padding:6px 8px; background:var(--amber-bg); border-left:3px solid var(--amber); border-radius:4px; margin-bottom:6px;}
+  .note-line{font-size:12.5px; color:var(--ink-soft); font-style:italic;}
+
+  table.hourly{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.hourly td{padding:5px 6px; border-bottom:1px solid var(--line); vertical-align:top;}
+  table.hourly td.time{width:52px; font-weight:700; color:var(--ink-soft);}
+  table.hourly tr.study td.activity{background:#FBF3DC;}
+  table.hourly tr.work td.activity{background:#E4F0EC;}
+  table.hourly tr.sleep td.activity{background:#EFEFEF; color:#8A8A8A;}
+  table.hourly tr.life td.activity{background:#E7F1EA;}
+
+  .checklist{margin:0; padding:0; list-style:none;}
+  .checklist li{
+    display:flex; align-items:flex-start; gap:8px; padding:7px 0;
+    border-bottom:1px solid var(--line); font-size:13px;
+  }
+  .checklist li:last-child{border-bottom:none;}
+  .checklist input{margin-top:3px;}
+  .checklist label.done{text-decoration:line-through; color:#9AA6A2;}
+
+  footer{padding:18px 28px 40px; max-width:1280px; margin:0 auto; color:var(--ink-soft); font-size:12px; line-height:1.6;}
+  footer a{color:var(--teal-ink);}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+    <div>
+      <h1>Rota-Linked Study &amp; Training Planner</h1>
+      <p class="sub">MRCS Part A · SMLE · MSRA · CST application · audit cycle · marathon training — built around your actual shifts</p>
+    </div>
+    <button id="resetBtn" title="Clear all ticked checklist items on this device"
+      style="background:rgba(255,255,255,0.1); color:#D8E3DF; border:1px solid rgba(255,255,255,0.25); border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer; white-space:nowrap;">
+      Reset all ticks
+    </button>
+  </div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<main>
+  <section class="panel" id="calendarPanel">
+    <div class="cal-nav">
+      <button id="prevMonth">&larr; Prev</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button id="nextMonth">Next &rarr;</button>
+    </div>
+    <div style="text-align:center; margin-bottom:8px;">
+      <button id="todayBtn" style="background:var(--teal); color:#fff; border:none; border-radius:6px; padding:6px 16px; font-size:13px; cursor:pointer;">Today</button>
+    </div>
+    <div class="grid7" id="dowRow"></div>
+    <div class="grid7" id="calGrid" style="margin-top:4px;"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:#1F6F5C"></span>Day / Weekend Day</span>
+      <span><span class="dot" style="background:#55606B"></span>Nights</span>
+      <span><span class="dot" style="background:#7A3B33"></span>Longs</span>
+      <span><span class="dot" style="background:#5B4B8A"></span>Lates</span>
+      <span><span class="dot" style="background:#CFCFCF"></span>Off</span>
+      <span><span class="dot" style="background:#B9782F; border-radius:50%;"></span>Milestone/task that day</span>
+    </div>
+    <p class="note-line" style="margin-top:10px;">Rota confirmed to 1 Dec 2026; dates after that are projected by repeating your 14-week cycle — re-check once your real rota is published.</p>
+  </section>
+
+  <section class="panel" id="detail">
+    <!-- filled by JS -->
+  </section>
+</main>
+
+<footer>
+  Built from your rota screenshots (confirmed 31 Aug – 1 Dec 2026, projected onward). Exam dates for SMLE and MSRA are estimates — update them once confirmed; the week-numbering and phasing will still hold even if exact dates shift by a week or two.
+</footer>
+
+<script id="planner-data" type="application/json">
+{
+ "days": [
+  {
+   "date": "2026-09-06",
+   "dow": "Sun",
+   "week": 0,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Surgery & Medicine baseline",
+   "topics": "Diagnostic approach to acute abdomen; basic peri-op care; general medicine revision plan",
+   "studyTopic": "Diagnostic approach to acute abdomen",
+   "workout": "Long run: 5 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "Foundations",
+   "tasks": [
+    "Pick audit topic & standard (TODAY)"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-09-07",
+   "dow": "Mon",
+   "week": 1,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine (30%)",
+   "topics": "Cardiology, respiratory, endocrine core conditions",
+   "studyTopic": "Cardiology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-08",
+   "dow": "Tue",
+   "week": 1,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine (30%)",
+   "topics": "Cardiology, respiratory, endocrine core conditions",
+   "studyTopic": "respiratory",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-09",
+   "dow": "Wed",
+   "week": 1,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine (30%)",
+   "topics": "Cardiology, respiratory, endocrine core conditions",
+   "studyTopic": "endocrine core conditions",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-10",
+   "dow": "Thu",
+   "week": 1,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine (30%)",
+   "topics": "Cardiology, respiratory, endocrine core conditions",
+   "studyTopic": "Cardiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-11",
+   "dow": "Fri",
+   "week": 1,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine (30%)",
+   "topics": "Cardiology, respiratory, endocrine core conditions",
+   "studyTopic": "respiratory",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-12",
+   "dow": "Sat",
+   "week": 1,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Medicine (30%)",
+   "topics": "Cardiology, respiratory, endocrine core conditions",
+   "studyTopic": "endocrine core conditions",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-13",
+   "dow": "Sun",
+   "week": 1,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Medicine (30%)",
+   "topics": "Cardiology, respiratory, endocrine core conditions",
+   "studyTopic": "Cardiology",
+   "workout": "Long run: 5 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [
+    "Audit: proposal agreed + data collection tool ready"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-09-14",
+   "dow": "Mon",
+   "week": 2,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine + GI",
+   "topics": "Gastroenterology, renal, infectious disease",
+   "studyTopic": "Gastroenterology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-15",
+   "dow": "Tue",
+   "week": 2,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine + GI",
+   "topics": "Gastroenterology, renal, infectious disease",
+   "studyTopic": "renal",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-16",
+   "dow": "Wed",
+   "week": 2,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine + GI",
+   "topics": "Gastroenterology, renal, infectious disease",
+   "studyTopic": "infectious disease",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-17",
+   "dow": "Thu",
+   "week": 2,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine + GI",
+   "topics": "Gastroenterology, renal, infectious disease",
+   "studyTopic": "Gastroenterology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-18",
+   "dow": "Fri",
+   "week": 2,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Medicine + GI",
+   "topics": "Gastroenterology, renal, infectious disease",
+   "studyTopic": "renal",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-19",
+   "dow": "Sat",
+   "week": 2,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Medicine + GI",
+   "topics": "Gastroenterology, renal, infectious disease",
+   "studyTopic": "infectious disease",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-20",
+   "dow": "Sun",
+   "week": 2,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Medicine + GI",
+   "topics": "Gastroenterology, renal, infectious disease",
+   "studyTopic": "Gastroenterology",
+   "workout": "Long run: 5 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-21",
+   "dow": "Mon",
+   "week": 3,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "SMLE - light review only (Longs/Nights)",
+   "topics": "Flashcard review only - endocrine/renal recall",
+   "studyTopic": "Flashcard review only - endocrine/renal recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-22",
+   "dow": "Tue",
+   "week": 3,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "SMLE - light review only (Longs/Nights)",
+   "topics": "Flashcard review only - endocrine/renal recall",
+   "studyTopic": "Flashcard review only - endocrine/renal recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-23",
+   "dow": "Wed",
+   "week": 3,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "SMLE - light review only (Longs/Nights)",
+   "topics": "Flashcard review only - endocrine/renal recall",
+   "studyTopic": "Flashcard review only - endocrine/renal recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-24",
+   "dow": "Thu",
+   "week": 3,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - light review only (Longs/Nights)",
+   "topics": "Flashcard review only - endocrine/renal recall",
+   "studyTopic": "Flashcard review only - endocrine/renal recall",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [
+    "Audit cycle 1 (baseline) data collection complete"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-09-25",
+   "dow": "Fri",
+   "week": 3,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "SMLE - light review only (Longs/Nights)",
+   "topics": "Flashcard review only - endocrine/renal recall",
+   "studyTopic": "Flashcard review only - endocrine/renal recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-26",
+   "dow": "Sat",
+   "week": 3,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "SMLE - light review only (Longs/Nights)",
+   "topics": "Flashcard review only - endocrine/renal recall",
+   "studyTopic": "Flashcard review only - endocrine/renal recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-27",
+   "dow": "Sun",
+   "week": 3,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "SMLE - light review only (Longs/Nights)",
+   "topics": "Flashcard review only - endocrine/renal recall",
+   "studyTopic": "Flashcard review only - endocrine/renal recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-28",
+   "dow": "Mon",
+   "week": 4,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "SMLE - light review only (Nights/Longs)",
+   "topics": "Flashcard review - cardio/respiratory recall",
+   "studyTopic": "Flashcard review - cardio/respiratory recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-29",
+   "dow": "Tue",
+   "week": 4,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - light review only (Nights/Longs)",
+   "topics": "Flashcard review - cardio/respiratory recall",
+   "studyTopic": "Flashcard review - cardio/respiratory recall",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-09-30",
+   "dow": "Wed",
+   "week": 4,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - light review only (Nights/Longs)",
+   "topics": "Flashcard review - cardio/respiratory recall",
+   "studyTopic": "Flashcard review - cardio/respiratory recall",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-01",
+   "dow": "Thu",
+   "week": 4,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "SMLE - light review only (Nights/Longs)",
+   "topics": "Flashcard review - cardio/respiratory recall",
+   "studyTopic": "Flashcard review - cardio/respiratory recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [
+    "Audit cycle 1 baseline results analysed"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-10-02",
+   "dow": "Fri",
+   "week": 4,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "SMLE - light review only (Nights/Longs)",
+   "topics": "Flashcard review - cardio/respiratory recall",
+   "studyTopic": "Flashcard review - cardio/respiratory recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-03",
+   "dow": "Sat",
+   "week": 4,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "SMLE - light review only (Nights/Longs)",
+   "topics": "Flashcard review - cardio/respiratory recall",
+   "studyTopic": "Flashcard review - cardio/respiratory recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-04",
+   "dow": "Sun",
+   "week": 4,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "SMLE - light review only (Nights/Longs)",
+   "topics": "Flashcard review - cardio/respiratory recall",
+   "studyTopic": "Flashcard review - cardio/respiratory recall",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-05",
+   "dow": "Mon",
+   "week": 5,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Obstetrics & Gynaecology (25%)",
+   "topics": "Antenatal care, obstetric emergencies, gynae oncology basics",
+   "studyTopic": "Antenatal care",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-06",
+   "dow": "Tue",
+   "week": 5,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Obstetrics & Gynaecology (25%)",
+   "topics": "Antenatal care, obstetric emergencies, gynae oncology basics",
+   "studyTopic": "obstetric emergencies",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-07",
+   "dow": "Wed",
+   "week": 5,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Obstetrics & Gynaecology (25%)",
+   "topics": "Antenatal care, obstetric emergencies, gynae oncology basics",
+   "studyTopic": "gynae oncology basics",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-08",
+   "dow": "Thu",
+   "week": 5,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Obstetrics & Gynaecology (25%)",
+   "topics": "Antenatal care, obstetric emergencies, gynae oncology basics",
+   "studyTopic": "Antenatal care",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [
+    "Audit: change/intervention agreed with supervisor"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-10-09",
+   "dow": "Fri",
+   "week": 5,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Obstetrics & Gynaecology (25%)",
+   "topics": "Antenatal care, obstetric emergencies, gynae oncology basics",
+   "studyTopic": "obstetric emergencies",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-10",
+   "dow": "Sat",
+   "week": 5,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Obstetrics & Gynaecology (25%)",
+   "topics": "Antenatal care, obstetric emergencies, gynae oncology basics",
+   "studyTopic": "gynae oncology basics",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-11",
+   "dow": "Sun",
+   "week": 5,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Obstetrics & Gynaecology (25%)",
+   "topics": "Antenatal care, obstetric emergencies, gynae oncology basics",
+   "studyTopic": "Antenatal care",
+   "workout": "Long run: 6 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-12",
+   "dow": "Mon",
+   "week": 6,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - O&G + Paediatrics",
+   "topics": "Menstrual disorders, contraception; paediatric development & common presentations",
+   "studyTopic": "Menstrual disorders",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-13",
+   "dow": "Tue",
+   "week": 6,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - O&G + Paediatrics",
+   "topics": "Menstrual disorders, contraception; paediatric development & common presentations",
+   "studyTopic": "contraception",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-14",
+   "dow": "Wed",
+   "week": 6,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - O&G + Paediatrics",
+   "topics": "Menstrual disorders, contraception; paediatric development & common presentations",
+   "studyTopic": "paediatric development & common presentations",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-15",
+   "dow": "Thu",
+   "week": 6,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - O&G + Paediatrics",
+   "topics": "Menstrual disorders, contraception; paediatric development & common presentations",
+   "studyTopic": "Menstrual disorders",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [
+    "Audit cycle 1 presented locally; change implementation begins"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-10-16",
+   "dow": "Fri",
+   "week": 6,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - O&G + Paediatrics",
+   "topics": "Menstrual disorders, contraception; paediatric development & common presentations",
+   "studyTopic": "contraception",
+   "workout": "Long run: 7 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-17",
+   "dow": "Sat",
+   "week": 6,
+   "shift": "Weekend Day",
+   "projected": false,
+   "focus": "SMLE - O&G + Paediatrics",
+   "topics": "Menstrual disorders, contraception; paediatric development & common presentations",
+   "studyTopic": "paediatric development & common presentations",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-18",
+   "dow": "Sun",
+   "week": 6,
+   "shift": "Weekend Day",
+   "projected": false,
+   "focus": "SMLE - O&G + Paediatrics",
+   "topics": "Menstrual disorders, contraception; paediatric development & common presentations",
+   "studyTopic": "Menstrual disorders",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-19",
+   "dow": "Mon",
+   "week": 7,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Paediatrics (25%)",
+   "topics": "Neonatology, paediatric emergencies, immunisations",
+   "studyTopic": "Neonatology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-20",
+   "dow": "Tue",
+   "week": 7,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Paediatrics (25%)",
+   "topics": "Neonatology, paediatric emergencies, immunisations",
+   "studyTopic": "paediatric emergencies",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [
+    "Audit: change implemented; cycle 2 (re-audit) data collection starts"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-10-21",
+   "dow": "Wed",
+   "week": 7,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Paediatrics (25%)",
+   "topics": "Neonatology, paediatric emergencies, immunisations",
+   "studyTopic": "immunisations",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-22",
+   "dow": "Thu",
+   "week": 7,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Paediatrics (25%)",
+   "topics": "Neonatology, paediatric emergencies, immunisations",
+   "studyTopic": "Neonatology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-23",
+   "dow": "Fri",
+   "week": 7,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - Paediatrics (25%)",
+   "topics": "Neonatology, paediatric emergencies, immunisations",
+   "studyTopic": "paediatric emergencies",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-24",
+   "dow": "Sat",
+   "week": 7,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Paediatrics (25%)",
+   "topics": "Neonatology, paediatric emergencies, immunisations",
+   "studyTopic": "immunisations",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-25",
+   "dow": "Sun",
+   "week": 7,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Paediatrics (25%)",
+   "topics": "Neonatology, paediatric emergencies, immunisations",
+   "studyTopic": "Neonatology",
+   "workout": "Long run: 7 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-26",
+   "dow": "Mon",
+   "week": 8,
+   "shift": "Lates",
+   "projected": false,
+   "focus": "SMLE - Surgery (20%)",
+   "topics": "General surgery, urology, orthopaedic basics",
+   "studyTopic": "General surgery",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-27",
+   "dow": "Tue",
+   "week": 8,
+   "shift": "Lates",
+   "projected": false,
+   "focus": "SMLE - Surgery (20%)",
+   "topics": "General surgery, urology, orthopaedic basics",
+   "studyTopic": "urology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [
+    "Audit cycle 2 data collection complete"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-10-28",
+   "dow": "Wed",
+   "week": 8,
+   "shift": "Lates",
+   "projected": false,
+   "focus": "SMLE - Surgery (20%)",
+   "topics": "General surgery, urology, orthopaedic basics",
+   "studyTopic": "orthopaedic basics",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": "Halloween"
+  },
+  {
+   "date": "2026-10-29",
+   "dow": "Thu",
+   "week": 8,
+   "shift": "Lates",
+   "projected": false,
+   "focus": "SMLE - Surgery (20%)",
+   "topics": "General surgery, urology, orthopaedic basics",
+   "studyTopic": "General surgery",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-30",
+   "dow": "Fri",
+   "week": 8,
+   "shift": "Lates",
+   "projected": false,
+   "focus": "SMLE - Surgery (20%)",
+   "topics": "General surgery, urology, orthopaedic basics",
+   "studyTopic": "urology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-10-31",
+   "dow": "Sat",
+   "week": 8,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Surgery (20%)",
+   "topics": "General surgery, urology, orthopaedic basics",
+   "studyTopic": "orthopaedic basics",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-01",
+   "dow": "Sun",
+   "week": 8,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - Surgery (20%)",
+   "topics": "General surgery, urology, orthopaedic basics",
+   "studyTopic": "General surgery",
+   "workout": "Long run: 7 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE core",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-02",
+   "dow": "Mon",
+   "week": 9,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - full mixed mocks",
+   "topics": "Timed mixed-topic mock papers; error log review",
+   "studyTopic": "Timed mixed-topic mock papers",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE final + CST prep",
+   "tasks": [
+    "CST application opens (Oriel) - confirm date"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-11-03",
+   "dow": "Tue",
+   "week": 9,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - full mixed mocks",
+   "topics": "Timed mixed-topic mock papers; error log review",
+   "studyTopic": "error log review",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE final + CST prep",
+   "tasks": [
+    "Audit cycle 2 data analysed and compared to baseline"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-11-04",
+   "dow": "Wed",
+   "week": 9,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - full mixed mocks",
+   "topics": "Timed mixed-topic mock papers; error log review",
+   "studyTopic": "Timed mixed-topic mock papers",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE final + CST prep",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-05",
+   "dow": "Thu",
+   "week": 9,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - full mixed mocks",
+   "topics": "Timed mixed-topic mock papers; error log review",
+   "studyTopic": "error log review",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE final + CST prep",
+   "tasks": [],
+   "note": "Guy Fawkes Night"
+  },
+  {
+   "date": "2026-11-06",
+   "dow": "Fri",
+   "week": 9,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE - full mixed mocks",
+   "topics": "Timed mixed-topic mock papers; error log review",
+   "studyTopic": "Timed mixed-topic mock papers",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE final + CST prep",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-07",
+   "dow": "Sat",
+   "week": 9,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - full mixed mocks",
+   "topics": "Timed mixed-topic mock papers; error log review",
+   "studyTopic": "error log review",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "SMLE final + CST prep",
+   "tasks": [],
+   "note": "Remembrance Sunday"
+  },
+  {
+   "date": "2026-11-08",
+   "dow": "Sun",
+   "week": 9,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE - full mixed mocks",
+   "topics": "Timed mixed-topic mock papers; error log review",
+   "studyTopic": "Timed mixed-topic mock papers",
+   "workout": "Long run: 8 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "SMLE final + CST prep",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-09",
+   "dow": "Mon",
+   "week": 10,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "CST application (exam paused - Nights week)",
+   "topics": "Portfolio evidence gathering, references requested, personal statement",
+   "studyTopic": "Portfolio evidence gathering",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "CST application push / AUDIT DUE",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-10",
+   "dow": "Tue",
+   "week": 10,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "CST application (exam paused - Nights week)",
+   "topics": "Portfolio evidence gathering, references requested, personal statement",
+   "studyTopic": "references requested",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "CST application push / AUDIT DUE",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-11",
+   "dow": "Wed",
+   "week": 10,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "CST application (exam paused - Nights week)",
+   "topics": "Portfolio evidence gathering, references requested, personal statement",
+   "studyTopic": "personal statement",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "CST application push / AUDIT DUE",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-12",
+   "dow": "Thu",
+   "week": 10,
+   "shift": "Nights",
+   "projected": false,
+   "focus": "CST application (exam paused - Nights week)",
+   "topics": "Portfolio evidence gathering, references requested, personal statement",
+   "studyTopic": "Portfolio evidence gathering",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "CST application push / AUDIT DUE",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-13",
+   "dow": "Fri",
+   "week": 10,
+   "shift": "Off",
+   "projected": false,
+   "focus": "CST application (exam paused - Nights week)",
+   "topics": "Portfolio evidence gathering, references requested, personal statement",
+   "studyTopic": "references requested",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "CST application push / AUDIT DUE",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-14",
+   "dow": "Sat",
+   "week": 10,
+   "shift": "Off",
+   "projected": false,
+   "focus": "CST application (exam paused - Nights week)",
+   "topics": "Portfolio evidence gathering, references requested, personal statement",
+   "studyTopic": "personal statement",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": true,
+   "phase": "CST application push / AUDIT DUE",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-15",
+   "dow": "Sun",
+   "week": 10,
+   "shift": "Off",
+   "projected": false,
+   "focus": "CST application (exam paused - Nights week)",
+   "topics": "Portfolio evidence gathering, references requested, personal statement",
+   "studyTopic": "Portfolio evidence gathering",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": true,
+   "phase": "CST application push / AUDIT DUE",
+   "tasks": [
+    "AUDIT FULL CYCLE COMPLETE - re-presented locally, filed as CST portfolio evidence"
+   ],
+   "note": "Clocks go back"
+  },
+  {
+   "date": "2026-11-16",
+   "dow": "Mon",
+   "week": 11,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE final revision + CST application submission",
+   "topics": "SMLE question-bank weak areas; CST form final proofread",
+   "studyTopic": "SMLE question-bank weak areas",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "SMLE exam week / CST push",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-17",
+   "dow": "Tue",
+   "week": 11,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE final revision + CST application submission",
+   "topics": "SMLE question-bank weak areas; CST form final proofread",
+   "studyTopic": "CST form final proofread",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "SMLE exam week / CST push",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-18",
+   "dow": "Wed",
+   "week": 11,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE final revision + CST application submission",
+   "topics": "SMLE question-bank weak areas; CST form final proofread",
+   "studyTopic": "SMLE question-bank weak areas",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "SMLE exam week / CST push",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-19",
+   "dow": "Thu",
+   "week": 11,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE final revision + CST application submission",
+   "topics": "SMLE question-bank weak areas; CST form final proofread",
+   "studyTopic": "CST form final proofread",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "SMLE exam week / CST push",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-20",
+   "dow": "Fri",
+   "week": 11,
+   "shift": "Day",
+   "projected": false,
+   "focus": "SMLE final revision + CST application submission",
+   "topics": "SMLE question-bank weak areas; CST form final proofread",
+   "studyTopic": "SMLE question-bank weak areas",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "SMLE exam week / CST push",
+   "tasks": [
+    "CST application deadline (confirm)"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-11-21",
+   "dow": "Sat",
+   "week": 11,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE final revision + CST application submission",
+   "topics": "SMLE question-bank weak areas; CST form final proofread",
+   "studyTopic": "CST form final proofread",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "SMLE exam week / CST push",
+   "tasks": [
+    "SMLE EXAM (estimated date)"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-11-22",
+   "dow": "Sun",
+   "week": 11,
+   "shift": "Off",
+   "projected": false,
+   "focus": "SMLE final revision + CST application submission",
+   "topics": "SMLE question-bank weak areas; CST form final proofread",
+   "studyTopic": "SMLE question-bank weak areas",
+   "workout": "Long run: 8 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "SMLE exam week / CST push",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-23",
+   "dow": "Mon",
+   "week": 12,
+   "shift": "Day",
+   "projected": false,
+   "focus": "MSRA - Professional Dilemmas framework",
+   "topics": "GMC Good Medical Practice domains; SJT ranking technique practice",
+   "studyTopic": "GMC Good Medical Practice domains",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Reset + MSRA start",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-24",
+   "dow": "Tue",
+   "week": 12,
+   "shift": "Day",
+   "projected": false,
+   "focus": "MSRA - Professional Dilemmas framework",
+   "topics": "GMC Good Medical Practice domains; SJT ranking technique practice",
+   "studyTopic": "SJT ranking technique practice",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Reset + MSRA start",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-25",
+   "dow": "Wed",
+   "week": 12,
+   "shift": "Day",
+   "projected": false,
+   "focus": "MSRA - Professional Dilemmas framework",
+   "topics": "GMC Good Medical Practice domains; SJT ranking technique practice",
+   "studyTopic": "GMC Good Medical Practice domains",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Reset + MSRA start",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-26",
+   "dow": "Thu",
+   "week": 12,
+   "shift": "Day",
+   "projected": false,
+   "focus": "MSRA - Professional Dilemmas framework",
+   "topics": "GMC Good Medical Practice domains; SJT ranking technique practice",
+   "studyTopic": "SJT ranking technique practice",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Reset + MSRA start",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-27",
+   "dow": "Fri",
+   "week": 12,
+   "shift": "Day",
+   "projected": false,
+   "focus": "MSRA - Professional Dilemmas framework",
+   "topics": "GMC Good Medical Practice domains; SJT ranking technique practice",
+   "studyTopic": "GMC Good Medical Practice domains",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Reset + MSRA start",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-28",
+   "dow": "Sat",
+   "week": 12,
+   "shift": "Off",
+   "projected": false,
+   "focus": "MSRA - Professional Dilemmas framework",
+   "topics": "GMC Good Medical Practice domains; SJT ranking technique practice",
+   "studyTopic": "SJT ranking technique practice",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "Reset + MSRA start",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-29",
+   "dow": "Sun",
+   "week": 12,
+   "shift": "Off",
+   "projected": false,
+   "focus": "MSRA - Professional Dilemmas framework",
+   "topics": "GMC Good Medical Practice domains; SJT ranking technique practice",
+   "studyTopic": "GMC Good Medical Practice domains",
+   "workout": "Long run: 9 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Reset + MSRA start",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-11-30",
+   "dow": "Mon",
+   "week": 13,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "MSRA - Clinical Problem Solving (light, Longs week)",
+   "topics": "EMQ practice - cardiovascular & respiratory",
+   "studyTopic": "EMQ practice - cardiovascular & respiratory",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-01",
+   "dow": "Tue",
+   "week": 13,
+   "shift": "Longs",
+   "projected": false,
+   "focus": "MSRA - Clinical Problem Solving (light, Longs week)",
+   "topics": "EMQ practice - cardiovascular & respiratory",
+   "studyTopic": "EMQ practice - cardiovascular & respiratory",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-02",
+   "dow": "Wed",
+   "week": 13,
+   "shift": "Off",
+   "projected": false,
+   "focus": "MSRA - Clinical Problem Solving (light, Longs week)",
+   "topics": "EMQ practice - cardiovascular & respiratory",
+   "studyTopic": "EMQ practice - cardiovascular & respiratory",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-03",
+   "dow": "Thu",
+   "week": 13,
+   "shift": "Off",
+   "projected": false,
+   "focus": "MSRA - Clinical Problem Solving (light, Longs week)",
+   "topics": "EMQ practice - cardiovascular & respiratory",
+   "studyTopic": "EMQ practice - cardiovascular & respiratory",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-04",
+   "dow": "Fri",
+   "week": 13,
+   "shift": "Off",
+   "projected": false,
+   "focus": "MSRA - Clinical Problem Solving (light, Longs week)",
+   "topics": "EMQ practice - cardiovascular & respiratory",
+   "studyTopic": "EMQ practice - cardiovascular & respiratory",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-05",
+   "dow": "Sat",
+   "week": 13,
+   "shift": "Off",
+   "projected": false,
+   "focus": "MSRA - Clinical Problem Solving (light, Longs week)",
+   "topics": "EMQ practice - cardiovascular & respiratory",
+   "studyTopic": "EMQ practice - cardiovascular & respiratory",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MSRA build (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-06",
+   "dow": "Sun",
+   "week": 13,
+   "shift": "Off",
+   "projected": false,
+   "focus": "MSRA - Clinical Problem Solving (light, Longs week)",
+   "topics": "EMQ practice - cardiovascular & respiratory",
+   "studyTopic": "EMQ practice - cardiovascular & respiratory",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build (light)",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-07",
+   "dow": "Mon",
+   "week": 14,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "MSK, renal/urology, endocrine/metabolic SBAs",
+   "studyTopic": "MSK",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-08",
+   "dow": "Tue",
+   "week": 14,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "MSK, renal/urology, endocrine/metabolic SBAs",
+   "studyTopic": "renal/urology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-09",
+   "dow": "Wed",
+   "week": 14,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "MSK, renal/urology, endocrine/metabolic SBAs",
+   "studyTopic": "endocrine/metabolic SBAs",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-10",
+   "dow": "Thu",
+   "week": 14,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "MSK, renal/urology, endocrine/metabolic SBAs",
+   "studyTopic": "MSK",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-11",
+   "dow": "Fri",
+   "week": 14,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "MSK, renal/urology, endocrine/metabolic SBAs",
+   "studyTopic": "renal/urology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-12",
+   "dow": "Sat",
+   "week": 14,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "MSK, renal/urology, endocrine/metabolic SBAs",
+   "studyTopic": "endocrine/metabolic SBAs",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-13",
+   "dow": "Sun",
+   "week": 14,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "MSK, renal/urology, endocrine/metabolic SBAs",
+   "studyTopic": "MSK",
+   "workout": "Long run: 9 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-14",
+   "dow": "Mon",
+   "week": 15,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "Paeds, psychiatry/neurology, reproductive SBAs",
+   "studyTopic": "Paeds",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-15",
+   "dow": "Tue",
+   "week": 15,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "Paeds, psychiatry/neurology, reproductive SBAs",
+   "studyTopic": "psychiatry/neurology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-16",
+   "dow": "Wed",
+   "week": 15,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "Paeds, psychiatry/neurology, reproductive SBAs",
+   "studyTopic": "reproductive SBAs",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-17",
+   "dow": "Thu",
+   "week": 15,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "Paeds, psychiatry/neurology, reproductive SBAs",
+   "studyTopic": "Paeds",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-18",
+   "dow": "Fri",
+   "week": 15,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "Paeds, psychiatry/neurology, reproductive SBAs",
+   "studyTopic": "psychiatry/neurology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-19",
+   "dow": "Sat",
+   "week": 15,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "Paeds, psychiatry/neurology, reproductive SBAs",
+   "studyTopic": "reproductive SBAs",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-20",
+   "dow": "Sun",
+   "week": 15,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA - CPS core specialties",
+   "topics": "Paeds, psychiatry/neurology, reproductive SBAs",
+   "studyTopic": "Paeds",
+   "workout": "Long run: 9 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-21",
+   "dow": "Mon",
+   "week": 16,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - PD situational judgement mocks (Christmas week)",
+   "topics": "Full timed PD mocks; ranking-question drills",
+   "studyTopic": "Full timed PD mocks",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-22",
+   "dow": "Tue",
+   "week": 16,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - PD situational judgement mocks (Christmas week)",
+   "topics": "Full timed PD mocks; ranking-question drills",
+   "studyTopic": "ranking-question drills",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-23",
+   "dow": "Wed",
+   "week": 16,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - PD situational judgement mocks (Christmas week)",
+   "topics": "Full timed PD mocks; ranking-question drills",
+   "studyTopic": "Full timed PD mocks",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-24",
+   "dow": "Thu",
+   "week": 16,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - PD situational judgement mocks (Christmas week)",
+   "topics": "Full timed PD mocks; ranking-question drills",
+   "studyTopic": "ranking-question drills",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-25",
+   "dow": "Fri",
+   "week": 16,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MSRA - PD situational judgement mocks (Christmas week)",
+   "topics": "Full timed PD mocks; ranking-question drills",
+   "studyTopic": "Full timed PD mocks",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [
+    "Christmas Day"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2026-12-26",
+   "dow": "Sat",
+   "week": 16,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA - PD situational judgement mocks (Christmas week)",
+   "topics": "Full timed PD mocks; ranking-question drills",
+   "studyTopic": "ranking-question drills",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-27",
+   "dow": "Sun",
+   "week": 16,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA - PD situational judgement mocks (Christmas week)",
+   "topics": "Full timed PD mocks; ranking-question drills",
+   "studyTopic": "Full timed PD mocks",
+   "workout": "Long run: 9 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA build",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-28",
+   "dow": "Mon",
+   "week": 17,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MSRA - final mixed mocks (New Year, Longs/Nights)",
+   "topics": "Two full timed mixed mocks; error log review",
+   "studyTopic": "Two full timed mixed mocks",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-29",
+   "dow": "Tue",
+   "week": 17,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MSRA - final mixed mocks (New Year, Longs/Nights)",
+   "topics": "Two full timed mixed mocks; error log review",
+   "studyTopic": "error log review",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-30",
+   "dow": "Wed",
+   "week": 17,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MSRA - final mixed mocks (New Year, Longs/Nights)",
+   "topics": "Two full timed mixed mocks; error log review",
+   "studyTopic": "Two full timed mixed mocks",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2026-12-31",
+   "dow": "Thu",
+   "week": 17,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA - final mixed mocks (New Year, Longs/Nights)",
+   "topics": "Two full timed mixed mocks; error log review",
+   "studyTopic": "error log review",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MSRA final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-01",
+   "dow": "Fri",
+   "week": 17,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MSRA - final mixed mocks (New Year, Longs/Nights)",
+   "topics": "Two full timed mixed mocks; error log review",
+   "studyTopic": "Two full timed mixed mocks",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA final mocks",
+   "tasks": [
+    "New Year's Day"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-01-02",
+   "dow": "Sat",
+   "week": 17,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MSRA - final mixed mocks (New Year, Longs/Nights)",
+   "topics": "Two full timed mixed mocks; error log review",
+   "studyTopic": "error log review",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-03",
+   "dow": "Sun",
+   "week": 17,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MSRA - final mixed mocks (New Year, Longs/Nights)",
+   "topics": "Two full timed mixed mocks; error log review",
+   "studyTopic": "Two full timed mixed mocks",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-04",
+   "dow": "Mon",
+   "week": 18,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MSRA exam (~6 Jan) / MRCS Module 1 starts",
+   "topics": "Sit MSRA exam; MRCS Anatomy - introduction & upper limb",
+   "studyTopic": "Sit MSRA exam",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA EXAM / MRCS begins",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-05",
+   "dow": "Tue",
+   "week": 18,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA exam (~6 Jan) / MRCS Module 1 starts",
+   "topics": "Sit MSRA exam; MRCS Anatomy - introduction & upper limb",
+   "studyTopic": "MRCS Anatomy - introduction & upper limb",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MSRA EXAM / MRCS begins",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-06",
+   "dow": "Wed",
+   "week": 18,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MSRA exam (~6 Jan) / MRCS Module 1 starts",
+   "topics": "Sit MSRA exam; MRCS Anatomy - introduction & upper limb",
+   "studyTopic": "Sit MSRA exam",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA EXAM / MRCS begins",
+   "tasks": [
+    "MSRA EXAM (estimated date)"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-01-07",
+   "dow": "Thu",
+   "week": 18,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MSRA exam (~6 Jan) / MRCS Module 1 starts",
+   "topics": "Sit MSRA exam; MRCS Anatomy - introduction & upper limb",
+   "studyTopic": "MRCS Anatomy - introduction & upper limb",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA EXAM / MRCS begins",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-08",
+   "dow": "Fri",
+   "week": 18,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MSRA exam (~6 Jan) / MRCS Module 1 starts",
+   "topics": "Sit MSRA exam; MRCS Anatomy - introduction & upper limb",
+   "studyTopic": "Sit MSRA exam",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA EXAM / MRCS begins",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-09",
+   "dow": "Sat",
+   "week": 18,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MSRA exam (~6 Jan) / MRCS Module 1 starts",
+   "topics": "Sit MSRA exam; MRCS Anatomy - introduction & upper limb",
+   "studyTopic": "MRCS Anatomy - introduction & upper limb",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA EXAM / MRCS begins",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-10",
+   "dow": "Sun",
+   "week": 18,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MSRA exam (~6 Jan) / MRCS Module 1 starts",
+   "topics": "Sit MSRA exam; MRCS Anatomy - introduction & upper limb",
+   "studyTopic": "Sit MSRA exam",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MSRA EXAM / MRCS begins",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-11",
+   "dow": "Mon",
+   "week": 19,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Anatomy - limbs & thorax",
+   "topics": "Upper limb; lower limb; thorax",
+   "studyTopic": "Upper limb",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [
+    "CONFIRM exam-day leave/shift swap booked"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-01-12",
+   "dow": "Tue",
+   "week": 19,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Anatomy - limbs & thorax",
+   "topics": "Upper limb; lower limb; thorax",
+   "studyTopic": "lower limb",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-13",
+   "dow": "Wed",
+   "week": 19,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - limbs & thorax",
+   "topics": "Upper limb; lower limb; thorax",
+   "studyTopic": "thorax",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-14",
+   "dow": "Thu",
+   "week": 19,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - limbs & thorax",
+   "topics": "Upper limb; lower limb; thorax",
+   "studyTopic": "Upper limb",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-15",
+   "dow": "Fri",
+   "week": 19,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - limbs & thorax",
+   "topics": "Upper limb; lower limb; thorax",
+   "studyTopic": "lower limb",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-16",
+   "dow": "Sat",
+   "week": 19,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Anatomy - limbs & thorax",
+   "topics": "Upper limb; lower limb; thorax",
+   "studyTopic": "thorax",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-17",
+   "dow": "Sun",
+   "week": 19,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Anatomy - limbs & thorax",
+   "topics": "Upper limb; lower limb; thorax",
+   "studyTopic": "Upper limb",
+   "workout": "Long run: 9 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-18",
+   "dow": "Mon",
+   "week": 20,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - abdomen & pelvis",
+   "topics": "Abdomen; pelvis & perineum",
+   "studyTopic": "Abdomen",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-19",
+   "dow": "Tue",
+   "week": 20,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - abdomen & pelvis",
+   "topics": "Abdomen; pelvis & perineum",
+   "studyTopic": "pelvis & perineum",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-20",
+   "dow": "Wed",
+   "week": 20,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - abdomen & pelvis",
+   "topics": "Abdomen; pelvis & perineum",
+   "studyTopic": "Abdomen",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-21",
+   "dow": "Thu",
+   "week": 20,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - abdomen & pelvis",
+   "topics": "Abdomen; pelvis & perineum",
+   "studyTopic": "pelvis & perineum",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-22",
+   "dow": "Fri",
+   "week": 20,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Anatomy - abdomen & pelvis",
+   "topics": "Abdomen; pelvis & perineum",
+   "studyTopic": "Abdomen",
+   "workout": "Long run: 10 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-23",
+   "dow": "Sat",
+   "week": 20,
+   "shift": "Weekend Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - abdomen & pelvis",
+   "topics": "Abdomen; pelvis & perineum",
+   "studyTopic": "pelvis & perineum",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-24",
+   "dow": "Sun",
+   "week": 20,
+   "shift": "Weekend Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - abdomen & pelvis",
+   "topics": "Abdomen; pelvis & perineum",
+   "studyTopic": "Abdomen",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-25",
+   "dow": "Mon",
+   "week": 21,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - head, neck & spine",
+   "topics": "Head & neck; vertebral column & spinal cord",
+   "studyTopic": "Head & neck",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-26",
+   "dow": "Tue",
+   "week": 21,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - head, neck & spine",
+   "topics": "Head & neck; vertebral column & spinal cord",
+   "studyTopic": "vertebral column & spinal cord",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-27",
+   "dow": "Wed",
+   "week": 21,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - head, neck & spine",
+   "topics": "Head & neck; vertebral column & spinal cord",
+   "studyTopic": "Head & neck",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-28",
+   "dow": "Thu",
+   "week": 21,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - head, neck & spine",
+   "topics": "Head & neck; vertebral column & spinal cord",
+   "studyTopic": "vertebral column & spinal cord",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-29",
+   "dow": "Fri",
+   "week": 21,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Anatomy - head, neck & spine",
+   "topics": "Head & neck; vertebral column & spinal cord",
+   "studyTopic": "Head & neck",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-30",
+   "dow": "Sat",
+   "week": 21,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Anatomy - head, neck & spine",
+   "topics": "Head & neck; vertebral column & spinal cord",
+   "studyTopic": "vertebral column & spinal cord",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-01-31",
+   "dow": "Sun",
+   "week": 21,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Anatomy - head, neck & spine",
+   "topics": "Head & neck; vertebral column & spinal cord",
+   "studyTopic": "Head & neck",
+   "workout": "Long run: 11 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 1: Anatomy",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-01",
+   "dow": "Mon",
+   "week": 22,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "MRCS Physiology - cardio & respiratory",
+   "topics": "Cardiovascular physiology; respiratory physiology",
+   "studyTopic": "Cardiovascular physiology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-02",
+   "dow": "Tue",
+   "week": 22,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "MRCS Physiology - cardio & respiratory",
+   "topics": "Cardiovascular physiology; respiratory physiology",
+   "studyTopic": "respiratory physiology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-03",
+   "dow": "Wed",
+   "week": 22,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "MRCS Physiology - cardio & respiratory",
+   "topics": "Cardiovascular physiology; respiratory physiology",
+   "studyTopic": "Cardiovascular physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-04",
+   "dow": "Thu",
+   "week": 22,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "MRCS Physiology - cardio & respiratory",
+   "topics": "Cardiovascular physiology; respiratory physiology",
+   "studyTopic": "respiratory physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-05",
+   "dow": "Fri",
+   "week": 22,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "MRCS Physiology - cardio & respiratory",
+   "topics": "Cardiovascular physiology; respiratory physiology",
+   "studyTopic": "Cardiovascular physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-06",
+   "dow": "Sat",
+   "week": 22,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Physiology - cardio & respiratory",
+   "topics": "Cardiovascular physiology; respiratory physiology",
+   "studyTopic": "respiratory physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-07",
+   "dow": "Sun",
+   "week": 22,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Physiology - cardio & respiratory",
+   "topics": "Cardiovascular physiology; respiratory physiology",
+   "studyTopic": "Cardiovascular physiology",
+   "workout": "Long run: 12 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-08",
+   "dow": "Mon",
+   "week": 23,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Physiology - renal & GI",
+   "topics": "Renal physiology; gastrointestinal physiology",
+   "studyTopic": "Renal physiology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-09",
+   "dow": "Tue",
+   "week": 23,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Physiology - renal & GI",
+   "topics": "Renal physiology; gastrointestinal physiology",
+   "studyTopic": "gastrointestinal physiology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-10",
+   "dow": "Wed",
+   "week": 23,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Physiology - renal & GI",
+   "topics": "Renal physiology; gastrointestinal physiology",
+   "studyTopic": "Renal physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-11",
+   "dow": "Thu",
+   "week": 23,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Physiology - renal & GI",
+   "topics": "Renal physiology; gastrointestinal physiology",
+   "studyTopic": "gastrointestinal physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-12",
+   "dow": "Fri",
+   "week": 23,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Physiology - renal & GI",
+   "topics": "Renal physiology; gastrointestinal physiology",
+   "studyTopic": "Renal physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-13",
+   "dow": "Sat",
+   "week": 23,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Physiology - renal & GI",
+   "topics": "Renal physiology; gastrointestinal physiology",
+   "studyTopic": "gastrointestinal physiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-14",
+   "dow": "Sun",
+   "week": 23,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Physiology - renal & GI",
+   "topics": "Renal physiology; gastrointestinal physiology",
+   "studyTopic": "Renal physiology",
+   "workout": "Long run: 13 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-15",
+   "dow": "Mon",
+   "week": 24,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Physiology - endocrine, neuro, haem, MSK",
+   "topics": "Endocrine physiology; neurophysiology; haematological physiology; musculoskeletal physiology",
+   "studyTopic": "Endocrine physiology",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-16",
+   "dow": "Tue",
+   "week": 24,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Physiology - endocrine, neuro, haem, MSK",
+   "topics": "Endocrine physiology; neurophysiology; haematological physiology; musculoskeletal physiology",
+   "studyTopic": "neurophysiology",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-17",
+   "dow": "Wed",
+   "week": 24,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Physiology - endocrine, neuro, haem, MSK",
+   "topics": "Endocrine physiology; neurophysiology; haematological physiology; musculoskeletal physiology",
+   "studyTopic": "haematological physiology",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-18",
+   "dow": "Thu",
+   "week": 24,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Physiology - endocrine, neuro, haem, MSK",
+   "topics": "Endocrine physiology; neurophysiology; haematological physiology; musculoskeletal physiology",
+   "studyTopic": "musculoskeletal physiology",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-19",
+   "dow": "Fri",
+   "week": 24,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Physiology - endocrine, neuro, haem, MSK",
+   "topics": "Endocrine physiology; neurophysiology; haematological physiology; musculoskeletal physiology",
+   "studyTopic": "Endocrine physiology",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-20",
+   "dow": "Sat",
+   "week": 24,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Physiology - endocrine, neuro, haem, MSK",
+   "topics": "Endocrine physiology; neurophysiology; haematological physiology; musculoskeletal physiology",
+   "studyTopic": "neurophysiology",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-21",
+   "dow": "Sun",
+   "week": 24,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Physiology - endocrine, neuro, haem, MSK",
+   "topics": "Endocrine physiology; neurophysiology; haematological physiology; musculoskeletal physiology",
+   "studyTopic": "haematological physiology",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 2: Physiology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-22",
+   "dow": "Mon",
+   "week": 25,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - general pathology",
+   "topics": "Inflammation; wound healing & repair; cell injury & death; neoplasia",
+   "studyTopic": "Inflammation",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-23",
+   "dow": "Tue",
+   "week": 25,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - general pathology",
+   "topics": "Inflammation; wound healing & repair; cell injury & death; neoplasia",
+   "studyTopic": "wound healing & repair",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-24",
+   "dow": "Wed",
+   "week": 25,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - general pathology",
+   "topics": "Inflammation; wound healing & repair; cell injury & death; neoplasia",
+   "studyTopic": "cell injury & death",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-25",
+   "dow": "Thu",
+   "week": 25,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - general pathology",
+   "topics": "Inflammation; wound healing & repair; cell injury & death; neoplasia",
+   "studyTopic": "neoplasia",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-26",
+   "dow": "Fri",
+   "week": 25,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - general pathology",
+   "topics": "Inflammation; wound healing & repair; cell injury & death; neoplasia",
+   "studyTopic": "Inflammation",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-27",
+   "dow": "Sat",
+   "week": 25,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - general pathology",
+   "topics": "Inflammation; wound healing & repair; cell injury & death; neoplasia",
+   "studyTopic": "wound healing & repair",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-02-28",
+   "dow": "Sun",
+   "week": 25,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - general pathology",
+   "topics": "Inflammation; wound healing & repair; cell injury & death; neoplasia",
+   "studyTopic": "cell injury & death",
+   "workout": "Long run: 15 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-01",
+   "dow": "Mon",
+   "week": 26,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - systemic pathology",
+   "topics": "Vascular pathology; immunopathology; infection & microbiology",
+   "studyTopic": "Vascular pathology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-02",
+   "dow": "Tue",
+   "week": 26,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - systemic pathology",
+   "topics": "Vascular pathology; immunopathology; infection & microbiology",
+   "studyTopic": "immunopathology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-03",
+   "dow": "Wed",
+   "week": 26,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - systemic pathology",
+   "topics": "Vascular pathology; immunopathology; infection & microbiology",
+   "studyTopic": "infection & microbiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-04",
+   "dow": "Thu",
+   "week": 26,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - systemic pathology",
+   "topics": "Vascular pathology; immunopathology; infection & microbiology",
+   "studyTopic": "Vascular pathology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-05",
+   "dow": "Fri",
+   "week": 26,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pathology - systemic pathology",
+   "topics": "Vascular pathology; immunopathology; infection & microbiology",
+   "studyTopic": "immunopathology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-06",
+   "dow": "Sat",
+   "week": 26,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - systemic pathology",
+   "topics": "Vascular pathology; immunopathology; infection & microbiology",
+   "studyTopic": "infection & microbiology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-07",
+   "dow": "Sun",
+   "week": 26,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - systemic pathology",
+   "topics": "Vascular pathology; immunopathology; infection & microbiology",
+   "studyTopic": "Vascular pathology",
+   "workout": "Long run: 15 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-08",
+   "dow": "Mon",
+   "week": 27,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Pathology - haematological pathology + mocks",
+   "topics": "Bleeding & clotting disorders; Pathology mock questions",
+   "studyTopic": "Bleeding & clotting disorders",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-09",
+   "dow": "Tue",
+   "week": 27,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Pathology - haematological pathology + mocks",
+   "topics": "Bleeding & clotting disorders; Pathology mock questions",
+   "studyTopic": "Pathology mock questions",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-10",
+   "dow": "Wed",
+   "week": 27,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - haematological pathology + mocks",
+   "topics": "Bleeding & clotting disorders; Pathology mock questions",
+   "studyTopic": "Bleeding & clotting disorders",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-11",
+   "dow": "Thu",
+   "week": 27,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - haematological pathology + mocks",
+   "topics": "Bleeding & clotting disorders; Pathology mock questions",
+   "studyTopic": "Pathology mock questions",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-12",
+   "dow": "Fri",
+   "week": 27,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - haematological pathology + mocks",
+   "topics": "Bleeding & clotting disorders; Pathology mock questions",
+   "studyTopic": "Bleeding & clotting disorders",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-13",
+   "dow": "Sat",
+   "week": 27,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - haematological pathology + mocks",
+   "topics": "Bleeding & clotting disorders; Pathology mock questions",
+   "studyTopic": "Pathology mock questions",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-14",
+   "dow": "Sun",
+   "week": 27,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pathology - haematological pathology + mocks",
+   "topics": "Bleeding & clotting disorders; Pathology mock questions",
+   "studyTopic": "Bleeding & clotting disorders",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 3: Pathology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-15",
+   "dow": "Mon",
+   "week": 28,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - general & anaesthetic",
+   "topics": "General pharmacology; anaesthetic pharmacology",
+   "studyTopic": "General pharmacology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-16",
+   "dow": "Tue",
+   "week": 28,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - general & anaesthetic",
+   "topics": "General pharmacology; anaesthetic pharmacology",
+   "studyTopic": "anaesthetic pharmacology",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-17",
+   "dow": "Wed",
+   "week": 28,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - general & anaesthetic",
+   "topics": "General pharmacology; anaesthetic pharmacology",
+   "studyTopic": "General pharmacology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-18",
+   "dow": "Thu",
+   "week": 28,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - general & anaesthetic",
+   "topics": "General pharmacology; anaesthetic pharmacology",
+   "studyTopic": "anaesthetic pharmacology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-19",
+   "dow": "Fri",
+   "week": 28,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - general & anaesthetic",
+   "topics": "General pharmacology; anaesthetic pharmacology",
+   "studyTopic": "General pharmacology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-20",
+   "dow": "Sat",
+   "week": 28,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pharmacology - general & anaesthetic",
+   "topics": "General pharmacology; anaesthetic pharmacology",
+   "studyTopic": "anaesthetic pharmacology",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-21",
+   "dow": "Sun",
+   "week": 28,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pharmacology - general & anaesthetic",
+   "topics": "General pharmacology; anaesthetic pharmacology",
+   "studyTopic": "General pharmacology",
+   "workout": "Long run: 15 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-22",
+   "dow": "Mon",
+   "week": 29,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - surgical drugs",
+   "topics": "Antimicrobials; cardiovascular & other drugs",
+   "studyTopic": "Antimicrobials",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-23",
+   "dow": "Tue",
+   "week": 29,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - surgical drugs",
+   "topics": "Antimicrobials; cardiovascular & other drugs",
+   "studyTopic": "cardiovascular & other drugs",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-24",
+   "dow": "Wed",
+   "week": 29,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - surgical drugs",
+   "topics": "Antimicrobials; cardiovascular & other drugs",
+   "studyTopic": "Antimicrobials",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-25",
+   "dow": "Thu",
+   "week": 29,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - surgical drugs",
+   "topics": "Antimicrobials; cardiovascular & other drugs",
+   "studyTopic": "cardiovascular & other drugs",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-26",
+   "dow": "Fri",
+   "week": 29,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Pharmacology - surgical drugs",
+   "topics": "Antimicrobials; cardiovascular & other drugs",
+   "studyTopic": "Antimicrobials",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-27",
+   "dow": "Sat",
+   "week": 29,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pharmacology - surgical drugs",
+   "topics": "Antimicrobials; cardiovascular & other drugs",
+   "studyTopic": "cardiovascular & other drugs",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-28",
+   "dow": "Sun",
+   "week": 29,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Pharmacology - surgical drugs",
+   "topics": "Antimicrobials; cardiovascular & other drugs",
+   "studyTopic": "Antimicrobials",
+   "workout": "Long run: 15 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 4: Pharmacology",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-29",
+   "dow": "Mon",
+   "week": 30,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - perioperative care",
+   "topics": "Perioperative care; surgical infections & wound management",
+   "studyTopic": "Perioperative care",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-30",
+   "dow": "Tue",
+   "week": 30,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - perioperative care",
+   "topics": "Perioperative care; surgical infections & wound management",
+   "studyTopic": "surgical infections & wound management",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-03-31",
+   "dow": "Wed",
+   "week": 30,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - perioperative care",
+   "topics": "Perioperative care; surgical infections & wound management",
+   "studyTopic": "Perioperative care",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-01",
+   "dow": "Thu",
+   "week": 30,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - perioperative care",
+   "topics": "Perioperative care; surgical infections & wound management",
+   "studyTopic": "surgical infections & wound management",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-02",
+   "dow": "Fri",
+   "week": 30,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - perioperative care",
+   "topics": "Perioperative care; surgical infections & wound management",
+   "studyTopic": "Perioperative care",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-03",
+   "dow": "Sat",
+   "week": 30,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - perioperative care",
+   "topics": "Perioperative care; surgical infections & wound management",
+   "studyTopic": "surgical infections & wound management",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-04",
+   "dow": "Sun",
+   "week": 30,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - perioperative care",
+   "topics": "Perioperative care; surgical infections & wound management",
+   "studyTopic": "Perioperative care",
+   "workout": "Long run: 18 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-05",
+   "dow": "Mon",
+   "week": 31,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - trauma & oncology",
+   "topics": "Trauma & critical care; surgical oncology principles",
+   "studyTopic": "Trauma & critical care",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-06",
+   "dow": "Tue",
+   "week": 31,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - trauma & oncology",
+   "topics": "Trauma & critical care; surgical oncology principles",
+   "studyTopic": "surgical oncology principles",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-07",
+   "dow": "Wed",
+   "week": 31,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - trauma & oncology",
+   "topics": "Trauma & critical care; surgical oncology principles",
+   "studyTopic": "Trauma & critical care",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-08",
+   "dow": "Thu",
+   "week": 31,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - trauma & oncology",
+   "topics": "Trauma & critical care; surgical oncology principles",
+   "studyTopic": "surgical oncology principles",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-09",
+   "dow": "Fri",
+   "week": 31,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - trauma & oncology",
+   "topics": "Trauma & critical care; surgical oncology principles",
+   "studyTopic": "Trauma & critical care",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-10",
+   "dow": "Sat",
+   "week": 31,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - trauma & oncology",
+   "topics": "Trauma & critical care; surgical oncology principles",
+   "studyTopic": "surgical oncology principles",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-11",
+   "dow": "Sun",
+   "week": 31,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - trauma & oncology",
+   "topics": "Trauma & critical care; surgical oncology principles",
+   "studyTopic": "Trauma & critical care",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-12",
+   "dow": "Mon",
+   "week": 32,
+   "shift": "Nights",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - ethics & fluids (Paper 2 complete)",
+   "topics": "Ethics, law & patient safety; fluid, electrolytes & nutrition",
+   "studyTopic": "Ethics",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-13",
+   "dow": "Tue",
+   "week": 32,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - ethics & fluids (Paper 2 complete)",
+   "topics": "Ethics, law & patient safety; fluid, electrolytes & nutrition",
+   "studyTopic": "law & patient safety",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-14",
+   "dow": "Wed",
+   "week": 32,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - ethics & fluids (Paper 2 complete)",
+   "topics": "Ethics, law & patient safety; fluid, electrolytes & nutrition",
+   "studyTopic": "fluid",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-15",
+   "dow": "Thu",
+   "week": 32,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - ethics & fluids (Paper 2 complete)",
+   "topics": "Ethics, law & patient safety; fluid, electrolytes & nutrition",
+   "studyTopic": "electrolytes & nutrition",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-16",
+   "dow": "Fri",
+   "week": 32,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - ethics & fluids (Paper 2 complete)",
+   "topics": "Ethics, law & patient safety; fluid, electrolytes & nutrition",
+   "studyTopic": "Ethics",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-17",
+   "dow": "Sat",
+   "week": 32,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - ethics & fluids (Paper 2 complete)",
+   "topics": "Ethics, law & patient safety; fluid, electrolytes & nutrition",
+   "studyTopic": "law & patient safety",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-18",
+   "dow": "Sun",
+   "week": 32,
+   "shift": "Longs",
+   "projected": true,
+   "focus": "MRCS Principles of Surgery - ethics & fluids (Paper 2 complete)",
+   "topics": "Ethics, law & patient safety; fluid, electrolytes & nutrition",
+   "studyTopic": "fluid",
+   "workout": "Rest - protect sleep/recovery",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS Module 5: Principles of Surgery",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-19",
+   "dow": "Mon",
+   "week": 33,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Part A - full mixed mocks (both papers)",
+   "topics": "Timed Paper 1 & Paper 2 mocks; error log; weak-area targeting",
+   "studyTopic": "Timed Paper 1 & Paper 2 mocks",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-20",
+   "dow": "Tue",
+   "week": 33,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Part A - full mixed mocks (both papers)",
+   "topics": "Timed Paper 1 & Paper 2 mocks; error log; weak-area targeting",
+   "studyTopic": "error log",
+   "workout": "Easy run: 3-4 miles",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-21",
+   "dow": "Wed",
+   "week": 33,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Part A - full mixed mocks (both papers)",
+   "topics": "Timed Paper 1 & Paper 2 mocks; error log; weak-area targeting",
+   "studyTopic": "weak-area targeting",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-22",
+   "dow": "Thu",
+   "week": 33,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Part A - full mixed mocks (both papers)",
+   "topics": "Timed Paper 1 & Paper 2 mocks; error log; weak-area targeting",
+   "studyTopic": "Timed Paper 1 & Paper 2 mocks",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS final mocks",
+   "tasks": [
+    "CONFIRM MRCS exam-day leave/shift swap is booked (if not already)"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-04-23",
+   "dow": "Fri",
+   "week": 33,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Part A - full mixed mocks (both papers)",
+   "topics": "Timed Paper 1 & Paper 2 mocks; error log; weak-area targeting",
+   "studyTopic": "error log",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-24",
+   "dow": "Sat",
+   "week": 33,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Part A - full mixed mocks (both papers)",
+   "topics": "Timed Paper 1 & Paper 2 mocks; error log; weak-area targeting",
+   "studyTopic": "weak-area targeting",
+   "workout": "Rest day / optional stretch",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-25",
+   "dow": "Sun",
+   "week": 33,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Part A - full mixed mocks (both papers)",
+   "topics": "Timed Paper 1 & Paper 2 mocks; error log; weak-area targeting",
+   "studyTopic": "Timed Paper 1 & Paper 2 mocks",
+   "workout": "Long run: 10 miles",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS final mocks",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-26",
+   "dow": "Mon",
+   "week": 34,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Part A - final revision & exam",
+   "topics": "Light review only; rest before exam; sit exam 29 Apr",
+   "studyTopic": "Light review only - error log & weak areas",
+   "workout": "Rest - final exam prep, no training",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS EXAM WEEK",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-27",
+   "dow": "Tue",
+   "week": 34,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Part A - final revision & exam",
+   "topics": "Light review only; rest before exam; sit exam 29 Apr",
+   "studyTopic": "Light review only - error log & weak areas",
+   "workout": "Rest - final exam prep, no training",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS EXAM WEEK",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-28",
+   "dow": "Wed",
+   "week": 34,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Part A - final revision & exam",
+   "topics": "Light review only; rest before exam; sit exam 29 Apr",
+   "studyTopic": "Final rest & light review - sleep well tonight",
+   "workout": "Rest - final exam prep, no training",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS EXAM WEEK",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-04-29",
+   "dow": "Thu",
+   "week": 34,
+   "shift": "Day",
+   "projected": true,
+   "focus": "MRCS Part A - final revision & exam",
+   "topics": "Light review only; rest before exam; sit exam 29 Apr",
+   "studyTopic": "\ud83c\udfaf SIT MRCS PART A EXAM TODAY",
+   "workout": "Rest - final exam prep, no training",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS EXAM WEEK",
+   "tasks": [
+    "MRCS PART A EXAM"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-04-30",
+   "dow": "Fri",
+   "week": 34,
+   "shift": "Off",
+   "projected": true,
+   "focus": "MRCS Part A - final revision & exam",
+   "topics": "Light review only; rest before exam; sit exam 29 Apr",
+   "studyTopic": "Exam done - rest, no study needed",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "MRCS EXAM WEEK",
+   "tasks": [
+    "Decompress - MRCS is done. Begin final taper for the marathon"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-05-01",
+   "dow": "Sat",
+   "week": 34,
+   "shift": "Weekend Day",
+   "projected": true,
+   "focus": "MRCS Part A - final revision & exam",
+   "topics": "Light review only; rest before exam; sit exam 29 Apr",
+   "studyTopic": "Optional light review only if you want to",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS EXAM WEEK",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-02",
+   "dow": "Sun",
+   "week": 34,
+   "shift": "Weekend Day",
+   "projected": true,
+   "focus": "MRCS Part A - final revision & exam",
+   "topics": "Light review only; rest before exam; sit exam 29 Apr",
+   "studyTopic": "Free - fully rest",
+   "workout": "Easy 20-30 min walk or jog only",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "MRCS EXAM WEEK",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-03",
+   "dow": "Mon",
+   "week": 35,
+   "shift": "Day",
+   "projected": true,
+   "focus": "Decompress after MRCS; final marathon taper",
+   "topics": "Marathon race-week preparation; light logbook/portfolio admin",
+   "studyTopic": "Marathon race-week preparation",
+   "workout": "Short easy shakeout jog 15-20 min, or rest",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Post-exam / marathon taper",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-04",
+   "dow": "Tue",
+   "week": 35,
+   "shift": "Day",
+   "projected": true,
+   "focus": "Decompress after MRCS; final marathon taper",
+   "topics": "Marathon race-week preparation; light logbook/portfolio admin",
+   "studyTopic": "light logbook/portfolio admin",
+   "workout": "Short easy shakeout jog 15-20 min, or rest",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Post-exam / marathon taper",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-05",
+   "dow": "Wed",
+   "week": 35,
+   "shift": "Day",
+   "projected": true,
+   "focus": "Decompress after MRCS; final marathon taper",
+   "topics": "Marathon race-week preparation; light logbook/portfolio admin",
+   "studyTopic": "Marathon race-week preparation",
+   "workout": "Short easy shakeout jog 15-20 min, or rest",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Post-exam / marathon taper",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-06",
+   "dow": "Thu",
+   "week": 35,
+   "shift": "Day",
+   "projected": true,
+   "focus": "Decompress after MRCS; final marathon taper",
+   "topics": "Marathon race-week preparation; light logbook/portfolio admin",
+   "studyTopic": "light logbook/portfolio admin",
+   "workout": "Short easy shakeout jog 15-20 min, or rest",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Post-exam / marathon taper",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-07",
+   "dow": "Fri",
+   "week": 35,
+   "shift": "Day",
+   "projected": true,
+   "focus": "Decompress after MRCS; final marathon taper",
+   "topics": "Marathon race-week preparation; light logbook/portfolio admin",
+   "studyTopic": "Marathon race-week preparation",
+   "workout": "Short easy shakeout jog 15-20 min, or rest",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Post-exam / marathon taper",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-08",
+   "dow": "Sat",
+   "week": 35,
+   "shift": "Off",
+   "projected": true,
+   "focus": "Decompress after MRCS; final marathon taper",
+   "topics": "Marathon race-week preparation; light logbook/portfolio admin",
+   "studyTopic": "light logbook/portfolio admin",
+   "workout": "Short easy shakeout jog 15-20 min, or rest",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "Post-exam / marathon taper",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-09",
+   "dow": "Sun",
+   "week": 35,
+   "shift": "Off",
+   "projected": true,
+   "focus": "Decompress after MRCS; final marathon taper",
+   "topics": "Marathon race-week preparation; light logbook/portfolio admin",
+   "studyTopic": "Marathon race-week preparation",
+   "workout": "\ud83c\udfc1 MARATHON DAY - trust your training, good luck!",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Post-exam / marathon taper",
+   "tasks": [
+    "\ud83c\udfc1 MARATHON DAY"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-05-10",
+   "dow": "Mon",
+   "week": 36,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "Marathon recovery; resume CST/logbook/portfolio work",
+   "topics": "Recovery walking/stretching; catch up on logbook, WBAs, ARCP prep",
+   "studyTopic": "Recovery walking/stretching",
+   "workout": "Rest / gentle walk - recovery week, no running",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Recovery + reset",
+   "tasks": [
+    "Marathon recovery week - light movement only, celebrate finishing MRCS + the marathon"
+   ],
+   "note": ""
+  },
+  {
+   "date": "2027-05-11",
+   "dow": "Tue",
+   "week": 36,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "Marathon recovery; resume CST/logbook/portfolio work",
+   "topics": "Recovery walking/stretching; catch up on logbook, WBAs, ARCP prep",
+   "studyTopic": "catch up on logbook",
+   "workout": "Rest / gentle walk - recovery week, no running",
+   "isClimbingDay": true,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Recovery + reset",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-12",
+   "dow": "Wed",
+   "week": 36,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "Marathon recovery; resume CST/logbook/portfolio work",
+   "topics": "Recovery walking/stretching; catch up on logbook, WBAs, ARCP prep",
+   "studyTopic": "WBAs",
+   "workout": "Rest / gentle walk - recovery week, no running",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Recovery + reset",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-13",
+   "dow": "Thu",
+   "week": 36,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "Marathon recovery; resume CST/logbook/portfolio work",
+   "topics": "Recovery walking/stretching; catch up on logbook, WBAs, ARCP prep",
+   "studyTopic": "ARCP prep",
+   "workout": "Rest / gentle walk - recovery week, no running",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Recovery + reset",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-14",
+   "dow": "Fri",
+   "week": 36,
+   "shift": "Lates",
+   "projected": true,
+   "focus": "Marathon recovery; resume CST/logbook/portfolio work",
+   "topics": "Recovery walking/stretching; catch up on logbook, WBAs, ARCP prep",
+   "studyTopic": "Recovery walking/stretching",
+   "workout": "Rest / gentle walk - recovery week, no running",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Recovery + reset",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-15",
+   "dow": "Sat",
+   "week": 36,
+   "shift": "Off",
+   "projected": true,
+   "focus": "Marathon recovery; resume CST/logbook/portfolio work",
+   "topics": "Recovery walking/stretching; catch up on logbook, WBAs, ARCP prep",
+   "studyTopic": "catch up on logbook",
+   "workout": "Rest / gentle walk - recovery week, no running",
+   "isClimbingDay": false,
+   "isCyclingDay": false,
+   "isSocialDay": true,
+   "auditOpen": false,
+   "phase": "Recovery + reset",
+   "tasks": [],
+   "note": ""
+  },
+  {
+   "date": "2027-05-16",
+   "dow": "Sun",
+   "week": 36,
+   "shift": "Off",
+   "projected": true,
+   "focus": "Marathon recovery; resume CST/logbook/portfolio work",
+   "topics": "Recovery walking/stretching; catch up on logbook, WBAs, ARCP prep",
+   "studyTopic": "WBAs",
+   "workout": "Rest / gentle walk - recovery week, no running",
+   "isClimbingDay": false,
+   "isCyclingDay": true,
+   "isSocialDay": false,
+   "auditOpen": false,
+   "phase": "Recovery + reset",
+   "tasks": [],
+   "note": ""
+  }
+ ],
+ "keyDates": {
+  "mrcs": "2027-04-29",
+  "smle": "2026-11-21",
+  "msra": "2027-01-06",
+  "cstOpen": "2026-11-02",
+  "cstClose": "2026-11-20",
+  "marathon": "2027-05-09",
+  "auditDeadline": "2026-11-15"
+ }
+}
+</script>
+<script>
+const DATA = JSON.parse(document.getElementById('planner-data').textContent);
+const days = DATA.days;
+const byDate = {};
+days.forEach(d => byDate[d.date] = d);
+const key = DATA.keyDates;
+
+const HOURLY = {
+  "Day": [
+    ["07:30","Commute (30 min)","work"],
+    ["08:00","WORK 08:00–18:00","work"],
+    ["18:00","Commute home (30 min)","work"],
+    ["18:30","Dinner / wind down","life"],
+    ["19:00","STUDY: {{STUDY}}","study"],
+    ["22:00","Wind down, sleep by 23:00","sleep"],
+  ],
+  "Weekend Day": [
+    ["07:30","Commute (30 min)","work"],
+    ["08:00","WORK 08:00–18:00","work"],
+    ["18:00","Commute home (30 min)","work"],
+    ["18:30","Dinner / wind down","life"],
+    ["19:00","STUDY: {{STUDY}}","study"],
+    ["22:00","Wind down, sleep by 23:00","sleep"],
+  ],
+  "Longs": [
+    ["07:30","Commute (30 min)","work"],
+    ["08:00","WORK 08:00–20:00 (long day)","work"],
+    ["20:00","Commute home (30 min)","work"],
+    ["20:30","Dinner","life"],
+    ["21:00","Light review, 21:00–21:45: {{STUDY}}","study"],
+    ["22:00","Sleep — protect recovery ({{WORKOUT}})","sleep"],
+  ],
+  "Nights": [
+    ["16:00","Wake / breakfast","life"],
+    ["16:30","STUDY (pre-shift), 16:30–18:00: {{STUDY}}","study"],
+    ["18:00","Dinner, commute (30 min)","work"],
+    ["19:30","Prep, handover","work"],
+    ["20:00","WORK 20:00–08:00 (night shift)","work"],
+    ["08:00","Commute home (30 min), sleep by mid-morning ({{WORKOUT}})","sleep"],
+  ],
+  "Lates": [
+    ["07:00","STUDY, 07:00–11:00: {{STUDY}}","study"],
+    ["11:00","Lunch, prep for shift","life"],
+    ["11:30","Commute (30 min)","work"],
+    ["12:00","WORK 12:00–22:00","work"],
+    ["22:00","Commute home, light review if energy allows","study"],
+    ["23:00","Sleep","sleep"],
+  ],
+  "Off": [
+    ["08:00","STUDY 08:00–11:00: {{STUDY}}","study"],
+    ["11:00","WORKOUT: {{WORKOUT}}","life"],
+    ["14:00","STUDY 14:00–17:00: q-bank / review","study"],
+    ["17:00","Wind down, dinner","life"],
+    ["18:00","{{EVENING}}","life"],
+    ["20:00","Light review 19:30–21:00 if the week needs it","study"],
+    ["22:30","Sleep","sleep"],
+  ],
+};
+
+function toLocalISODate(year, monthIdx, day){
+  const mm = String(monthIdx + 1).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+function todayIso(){
+  const now = new Date();
+  return toLocalISODate(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+// --- Persisted checklist ticks (survives closing/reopening the app) -------
+function checkKey(date, idx){ return `mrcsplan_check_${date}_${idx}`; }
+function getChecked(date, idx){
+  try { return localStorage.getItem(checkKey(date, idx)) === '1'; } catch(e){ return false; }
+}
+function setChecked(date, idx, val){
+  try { localStorage.setItem(checkKey(date, idx), val ? '1' : '0'); } catch(e){ /* storage unavailable */ }
+}
+
+function isDayComplete(rec){
+  const items = buildChecklist(rec);
+  if(items.length === 0) return false;
+  return items.every((_,i)=>getChecked(rec.date, i));
+}
+
+function dayProgress(rec){
+  const items = buildChecklist(rec);
+  const done = items.reduce((n,_,i)=>n + (getChecked(rec.date,i) ? 1 : 0), 0);
+  return {done, total: items.length};
+}
+
+function calcStreak(){
+  let idx = -1;
+  for(let i=0;i<days.length;i++){ if(days[i].date <= todayIso()) idx = i; else break; }
+  if(idx < 0) return 0;
+  let i = idx;
+  if(!isDayComplete(days[i])) i--; // today in progress doesn't break the streak
+  let streak = 0;
+  while(i>=0 && isDayComplete(days[i])){ streak++; i--; }
+  return streak;
+}
+
+function resetAllTicks(){
+  if(!confirm('Clear every ticked checklist item on this device? This cannot be undone.')) return;
+  try{
+    const toRemove = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith('mrcsplan_check_')) toRemove.push(k);
+    }
+    toRemove.forEach(k=>localStorage.removeItem(k));
+  }catch(e){ /* storage unavailable */ }
+  renderChips();
+  renderCalendar();
+  renderDetail();
+}
+
+function eveningLine(rec){
+  const bits = [];
+  if (rec.isClimbingDay) bits.push("Climbing session");
+  if (rec.isCyclingDay) bits.push("Cycling trip");
+  if (rec.isSocialDay) bits.push("Partner / friends time");
+  return bits.length ? bits.join(" + ") : "Free evening / life admin";
+}
+
+function buildChecklist(rec){
+  const items = [];
+  items.push(`Study: ${rec.studyTopic}`);
+  items.push(`Workout: ${rec.workout}`);
+  items.push("Log 5–10 q-bank questions in error log (wrong answers only)");
+  items.push("ISCP: log any WBA/CBD/PBA/logbook entries from today");
+  if (rec.date === key.auditDeadline) {
+    items.push("🎯 AUDIT DEADLINE TODAY — finish the full write-up and re-present locally");
+  } else if (rec.auditOpen) {
+    items.push("Audit: 15 min admin to keep the cycle on track for 15 Nov");
+  }
+  if (rec.isClimbingDay) items.push("🧗 Climbing session tonight");
+  if (rec.isCyclingDay) items.push("🚴 Cycling trip today");
+  if (rec.isSocialDay) items.push("❤️ Partner / friends time");
+  items.push("Sleep by target time — non-negotiable before any exam or a Nights/Longs shift");
+  return items;
+}
+
+function daysUntil(dateStr, fromStr){
+  const a = new Date(fromStr), b = new Date(dateStr);
+  return Math.round((b-a)/86400000);
+}
+
+function fmtChip(label, dateStr, todayStr){
+  const n = daysUntil(dateStr, todayStr);
+  let val;
+  if(n === 0) val = "TODAY";
+  else if(n > 0) val = n + " days";
+  else val = "passed";
+  return {label, val, warn: n>=0 && n<=14};
+}
+
+function renderChips(){
+  const t = todayIso();
+  const today = days.find(d=>d.date === t) ? t : days[0].date;
+  const chipsEl = document.getElementById('chips');
+
+  const streak = calcStreak();
+  const todayRec = byDate[t];
+  const statChips = [];
+  statChips.push(`
+    <div class="chip stat">
+      <span class="label">Streak</span>
+      <span class="val">${streak > 0 ? '🔥 ' + streak + ' day' + (streak===1?'':'s') : '—'}</span>
+    </div>`);
+  if(todayRec){
+    const p = dayProgress(todayRec);
+    statChips.push(`
+      <div class="chip stat">
+        <span class="label">Today's ticks</span>
+        <span class="val">${p.done}/${p.total}</span>
+      </div>`);
+  }
+
+  const items = [
+    fmtChip('MRCS Part A', key.mrcs, today),
+    fmtChip('SMLE (est.)', key.smle, today),
+    fmtChip('MSRA (est.)', key.msra, today),
+    fmtChip('Audit due', key.auditDeadline, today),
+    fmtChip('CST app closes (est.)', key.cstClose, today),
+    fmtChip('Marathon (target)', key.marathon, today),
+  ];
+  chipsEl.innerHTML = statChips.join('') + items.map(it => `
+    <div class="chip ${it.warn?'warn':''}">
+      <span class="label">${it.label}</span>
+      <span class="val">${it.val}</span>
+    </div>`).join('');
+}
+
+let viewYear, viewMonth; // 0-indexed month
+let selectedDate = null;
+
+function shiftClass(shift){
+  return 'shift-' + shift.replace(/\s+/g,'');
+}
+
+function renderCalendar(){
+  document.getElementById('monthLabel').textContent =
+    new Date(viewYear, viewMonth, 1).toLocaleString('en-GB', {month:'long', year:'numeric'});
+
+  const dowRow = document.getElementById('dowRow');
+  dowRow.innerHTML = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>`<div class="dow">${x}</div>`).join('');
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const firstOfMonth = new Date(viewYear, viewMonth, 1);
+  let startDow = firstOfMonth.getDay(); // 0=Sun
+  startDow = (startDow + 6) % 7; // convert to Mon=0
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+
+  for(let i=0;i<startDow;i++){
+    grid.insertAdjacentHTML('beforeend', `<div class="day-cell empty"></div>`);
+  }
+  for(let dnum=1; dnum<=daysInMonth; dnum++){
+    const iso = toLocalISODate(viewYear, viewMonth, dnum);
+    const rec = byDate[iso];
+    if(!rec){
+      grid.insertAdjacentHTML('beforeend', `<div class="day-cell empty"></div>`);
+      continue;
+    }
+    const cls = shiftClass(rec.shift);
+    const sel = (iso === selectedDate) ? 'selected' : '';
+    const hasTask = (rec.tasks && rec.tasks.length);
+    const hasWellbeing = rec.isClimbingDay || rec.isCyclingDay || rec.isSocialDay;
+    const flag = (hasTask || hasWellbeing) ? '<span class="flagdot"></span>' : '';
+    grid.insertAdjacentHTML('beforeend', `
+      <div class="day-cell ${cls} ${sel}" data-date="${iso}">
+        ${flag}
+        <div class="dnum">${dnum}</div>
+        <div class="shifttag">${rec.shift}</div>
+      </div>`);
+  }
+  grid.querySelectorAll('.day-cell[data-date]').forEach(el=>{
+    el.addEventListener('click', ()=>{ selectedDate = el.dataset.date; renderCalendar(); renderDetail(); });
+  });
+}
+
+function renderDetail(){
+  const el = document.getElementById('detail');
+  if(!selectedDate){ const t = todayIso(); selectedDate = byDate[t] ? t : days[0].date; }
+  const rec = byDate[selectedDate] || days[0];
+  const [dy, dm, dday] = rec.date.split('-').map(Number);
+  const dateObj = new Date(dy, dm - 1, dday);
+  const dateLabel = dateObj.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  const projLabel = rec.projected ? '<span class="projflag">— projected shift (confirm nearer the time)</span>' : '';
+
+  const hourlyRows = (HOURLY[rec.shift] || HOURLY['Off']).map(([t,act,cls])=>{
+    const filled = act.replace('{{STUDY}}', rec.studyTopic).replace('{{WORKOUT}}', rec.workout).replace('{{EVENING}}', eveningLine(rec));
+    return `<tr class="${cls}"><td class="time">${t}</td><td class="activity">${filled}</td></tr>`;
+  }).join('');
+
+  const tasksHtml = rec.tasks.length
+    ? `<ul class="tasklist">${rec.tasks.map(t=>`<li>${t}</li>`).join('')}</ul>`
+    : `<p class="note-line">No specific milestone today.</p>`;
+
+  const wellbeingBits = [];
+  if (rec.isClimbingDay) wellbeingBits.push("🧗 Climbing");
+  if (rec.isCyclingDay) wellbeingBits.push("🚴 Cycling trip");
+  if (rec.isSocialDay) wellbeingBits.push("❤️ Partner/friends");
+  const wellbeingHtml = wellbeingBits.length
+    ? `<p style="margin:6px 0 0;">${wellbeingBits.join(' &nbsp;·&nbsp; ')}</p>` : '';
+
+  const checklist = buildChecklist(rec);
+  const checklistHtml = checklist.map((t,i)=>{
+    const checked = getChecked(rec.date, i);
+    return `
+    <li>
+      <input type="checkbox" id="chk_${i}" ${checked ? 'checked' : ''}
+        onchange="setChecked('${rec.date}', ${i}, this.checked); document.getElementById('lbl_${i}').classList.toggle('done', this.checked); renderChips();">
+      <label id="lbl_${i}" for="chk_${i}" class="${checked ? 'done' : ''}">${t}</label>
+    </li>`;
+  }).join('');
+
+  el.innerHTML = `
+    <h2 class="datehead" style="margin-bottom:0;">${dateLabel}</h2>
+    <div class="shiftline"><strong>${rec.shift}</strong> shift &middot; Week ${rec.week} &middot; ${rec.phase} ${projLabel}</div>
+    ${rec.note ? `<p class="note-line" style="margin-bottom:12px;">${rec.note}</p>` : ''}
+
+    <div class="block">
+      <h3>Today's study topic</h3>
+      <p><strong>${rec.studyTopic}</strong></p>
+      <p style="margin-top:4px; color:var(--ink-soft); font-size:12.5px;">Part of this week's focus: ${rec.focus}</p>
+    </div>
+
+    <div class="block">
+      <h3>Today's workout</h3>
+      <p><strong>${rec.workout}</strong></p>
+      ${wellbeingHtml}
+    </div>
+
+    <div class="block">
+      <h3>Milestones &amp; tasks today</h3>
+      ${tasksHtml}
+    </div>
+
+    <div class="block">
+      <h3>Hourly plan for a ${rec.shift} day</h3>
+      <table class="hourly">${hourlyRows}</table>
+    </div>
+
+    <div class="block">
+      <h3>Daily checklist</h3>
+      <ul class="checklist">${checklistHtml}</ul>
+      <p class="note-line" style="margin-top:6px;">Ticks are saved on this device — they'll still be there next time you open the app.</p>
+    </div>
+  `;
+}
+
+document.getElementById('prevMonth').addEventListener('click', ()=>{
+  viewMonth--; if(viewMonth<0){viewMonth=11; viewYear--;}
+  renderCalendar();
+});
+document.getElementById('nextMonth').addEventListener('click', ()=>{
+  viewMonth++; if(viewMonth>11){viewMonth=0; viewYear++;}
+  renderCalendar();
+});
+document.getElementById('todayBtn').addEventListener('click', ()=>{
+  const t = todayIso();
+  const target = byDate[t] ? t : days[0].date;
+  const [ty, tm] = target.split('-').map(Number);
+  viewYear = ty; viewMonth = tm - 1;
+  selectedDate = target;
+  renderCalendar();
+  renderDetail();
+});
+document.getElementById('resetBtn').addEventListener('click', resetAllTicks);
+
+(function init(){
+  renderChips();
+  const t = todayIso();
+  const initialDate = byDate[t] ? t : days[0].date;
+  const [sy, sm] = initialDate.split('-').map(Number);
+  viewYear = sy;
+  viewMonth = sm - 1;
+  selectedDate = initialDate;
+  renderCalendar();
+  renderDetail();
+})();
+
+</script>
+</body>
+</html>
